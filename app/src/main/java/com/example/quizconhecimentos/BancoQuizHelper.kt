@@ -17,7 +17,7 @@ class BancoQuizHelper(context: Context) : SQLiteOpenHelper(
     context,
     "quiz_gerais.db", // Nome do arquivo do banco no dispositivo
     null,
-    1 // Versão do banco de dados
+    2 // Versão do banco de dados
 ) {
     override fun onCreate(db: SQLiteDatabase) {
         val sqlCriarTabela = """
@@ -33,6 +33,7 @@ class BancoQuizHelper(context: Context) : SQLiteOpenHelper(
 
         db.execSQL(sqlCriarTabela)
 
+        db.execSQL("CREATE TABLE recordes (id INTEGER PRIMARY KEY AUTOINCREMENT, pontos INTEGER NOT NULL)")
         // Carga inicial de perguntas (Seed) no momento da criação do banco
         inserirPerguntaInicial(
             db,
@@ -106,6 +107,23 @@ class BancoQuizHelper(context: Context) : SQLiteOpenHelper(
                 val correta = it.getInt(it.getColumnIndexOrThrow("correta"))
 
                 lista.add(Pergunta(id, enunciado, listOf(opA, opB, opC), correta))
+                fun salvarRecorde(pontos: Int) {
+                    val db = writableDatabase
+                    val valores = ContentValues().apply { put("pontos", pontos) }
+                    db.insert("recordes", null, valores)
+                    db.close()
+                }
+
+                fun buscarMelhorPontuacao(): Int {
+                    val db = readableDatabase
+                    val cursor = db.rawQuery("SELECT MAX(pontos) FROM recordes", null)
+                    var recorde = 0
+                    cursor.use {
+                        if (it.moveToFirst()) recorde = it.getInt(0)
+                    }
+                    db.close()
+                    return recorde
+                }
             }
         }
         db.close()
